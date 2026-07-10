@@ -5,27 +5,21 @@ class ConfiguracionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: const Color(0xffF3F6FB),
-
       appBar: AppBar(
-        title: const Text("Configuración"),
+        title: const Text('Configuración'),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-
           children: [
-
             const Center(
               child: Column(
                 children: [
                   Text(
-                    "Configuración del Sistema",
+                    'Configuración del Sistema',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -34,46 +28,46 @@ class ConfiguracionScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Administre las tablas maestras de OptiGest",
+                    'Administre las tablas maestras de OptiGest',
                     style: TextStyle(color: Colors.grey),
-                  )
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 40),
 
-            buildSection(
-              "Personal",
+            _buildSection(
+              'Personal',
               Icons.people,
               [
-                "Personal",
-                "Roles",
-                "Documentos",
-                "Estado Personal",
+                'Personal',
+                'Roles',
+                'Documentos',
+                'Estado Personal',
               ],
             ),
 
-            buildSection(
-              "Activos",
+            _buildSection(
+              'Activos',
               Icons.inventory,
               [
-                "Activos",
-                "Categorías",
-                "Estado Activo",
-                "Proveedores",
+                'Activos',
+                'Categorías',
+                'Estado Activo',
+                'Proveedores',
               ],
             ),
 
-            buildSection(
-              "Operación",
+            _buildSection(
+              'Operación',
               Icons.settings,
               [
-                "Asignaciones",
-                "Programación Personal",
-                "Horarios",
-                "Días",
-                "Mantenimiento",
+                'Asignaciones',
+                'Programación Personal',
+                'Horarios',
+                'Días',
+                'Mantenimiento',
               ],
             ),
 
@@ -81,29 +75,25 @@ class ConfiguracionScreen extends StatelessWidget {
 
             Center(
               child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back),
-                label: const Text("Volver al Panel"),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                label: const Text('Volver al Panel'),
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget buildSection(
+  Widget _buildSection(
     String titulo,
     IconData icon,
     List<String> items,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
-
         Row(
           children: [
             Icon(icon),
@@ -111,8 +101,8 @@ class ConfiguracionScreen extends StatelessWidget {
             Text(
               titulo,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
                 fontSize: 24,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -123,9 +113,7 @@ class ConfiguracionScreen extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-
           itemCount: items.length,
-
           gridDelegate:
               const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
@@ -133,29 +121,26 @@ class ConfiguracionScreen extends StatelessWidget {
             mainAxisSpacing: 20,
             childAspectRatio: 1.2,
           ),
-
-          itemBuilder: (_, index) {
+          itemBuilder: (context, index) {
             return Card(
               elevation: 3,
-
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-
-                onTap: () {},
-
+                onTap: () {
+                  // Acción del módulo
+                },
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-
                   children: [
-
                     const Icon(
                       Icons.folder_open,
                       size: 45,
                       color: Colors.blue,
                     ),
-
                     const SizedBox(height: 12),
-
                     Text(
                       items[index],
                       textAlign: TextAlign.center,
