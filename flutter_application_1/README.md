@@ -1,17 +1,44 @@
-# flutter_application_1
+# OptiGest móvil (Flutter nativo)
 
-A new Flutter project.
+Este proyecto porta a Flutter las principales áreas de OptiGest60: inicio de
+sesión, panel de control, gestión de activos, gestión de personal, registro de
+activos y personal, y accesos a asignaciones, catálogos, mantenimiento e
+historial administrativo.
 
-## Getting Started
+No usa `WebView` ni `webview_flutter`. El error de
+`error.isForMainFrame` queda eliminado junto con esa dependencia.
 
-This project is a starting point for a Flutter application.
+## Importante: conexión a datos
 
-A few resources to get you started if this is your first Flutter project:
+El proyecto de NetBeans recibido es JSP/Servlet y sus rutas (`/Iniciar`,
+`/GuardarActivo`, etc.) devuelven páginas HTML; no contiene una API REST/JSON.
+Por seguridad una aplicación Android no debe conectarse directamente a MySQL:
+la URL, usuario y contraseña se podrían extraer del APK.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+La interfaz Flutter funciona hoy con datos iniciales y altas temporales en
+memoria. Para que guarde y consulte los mismos datos de Railway se debe exponer
+una API autenticada en el servidor Java, por ejemplo:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```
+POST /api/v1/auth/login
+GET  /api/v1/activos
+POST /api/v1/activos
+GET  /api/v1/personal
+POST /api/v1/personal
+```
+
+Luego se reemplaza el estado temporal por peticiones HTTPS a esa API. No hay que
+modificar ni publicar las credenciales de MySQL en Flutter.
+
+## Ejecutar
+
+```bash
+flutter pub get
+flutter run
+```
+
+Para el APK:
+
+```bash
+flutter build apk --release
+```
