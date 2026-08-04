@@ -153,6 +153,16 @@ class _OptiGestHomeState extends State<OptiGestHome> {
     Empleado(nombre: 'Mauricio Roncancio', documento: '1000444555', rol: 'Contador', estado: 'Vacaciones'),
     Empleado(nombre: 'Jhon Figueroa', documento: '1019223345', rol: 'Desarrollador', estado: 'Activo'),
   ];
+  final List<Proveedor> _proveedores = [
+    Proveedor(nombre: 'TecnoServicios SAS', telefono: '3101234567', direccion: 'Cra 45 # 12-30, Bogotá', email: 'contacto@tecnoservicios.com'),
+    Proveedor(nombre: 'ClimaFrío Ltda', telefono: '3129876543', direccion: 'Cll 80 # 20-15, Bogotá', email: 'ventas@climafrio.com'),
+  ];
+  final List<Asignacion> _asignaciones = [];
+  final List<Mantenimiento> _mantenimientos = [];
+  final List<String> _categorias = ['Electrónicos', 'Herramientas'];
+  final List<String> _roles = ['Administrador', 'Personal fijo', 'Temporal'];
+  final List<String> _estadosActivo = ['Disponible', 'Asignado', 'En mantenimiento', 'De baja'];
+  final List<String> _estadosPersonal = ['Activo', 'Vacaciones', 'Inactivo'];
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +170,18 @@ class _OptiGestHomeState extends State<OptiGestHome> {
       DashboardPage(activos: _activos, personal: _personal, onOpen: (index) => setState(() => _pagina = index)),
       ActivosPage(activos: _activos, onChanged: () => setState(() {})),
       PersonalPage(personal: _personal, onChanged: () => setState(() {})),
-      const MasPage(),
+      MasPage(
+        activos: _activos,
+        personal: _personal,
+        proveedores: _proveedores,
+        asignaciones: _asignaciones,
+        mantenimientos: _mantenimientos,
+        categorias: _categorias,
+        roles: _roles,
+        estadosActivo: _estadosActivo,
+        estadosPersonal: _estadosPersonal,
+        onChanged: () => setState(() {}),
+      ),
     ];
     const titulos = ['Panel de control', 'Gestión de activos', 'Gestión de personal', 'Más opciones'];
     return Scaffold(
@@ -282,17 +303,488 @@ class _PersonalPageState extends State<PersonalPage> {
 }
 
 class MasPage extends StatelessWidget {
-  const MasPage({super.key});
+  const MasPage({
+    super.key,
+    required this.activos,
+    required this.personal,
+    required this.proveedores,
+    required this.asignaciones,
+    required this.mantenimientos,
+    required this.categorias,
+    required this.roles,
+    required this.estadosActivo,
+    required this.estadosPersonal,
+    required this.onChanged,
+  });
+  final List<Activo> activos;
+  final List<Empleado> personal;
+  final List<Proveedor> proveedores;
+  final List<Asignacion> asignaciones;
+  final List<Mantenimiento> mantenimientos;
+  final List<String> categorias, roles, estadosActivo, estadosPersonal;
+  final VoidCallback onChanged;
+
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
         const _SectionTitle('Administración'),
-        _Option(icon: Icons.assignment_ind_outlined, title: 'Asignaciones', text: 'Asignar activos a colaboradores'),
-        _Option(icon: Icons.build_outlined, title: 'Mantenimientos', text: 'Registrar mantenimiento de activos'),
-        _Option(icon: Icons.category_outlined, title: 'Catálogos', text: 'Categorías, roles, proveedores y estados'),
-        _Option(icon: Icons.history, title: 'Historial administrativo', text: 'Consultar cambios registrados'),
+        _Option(
+          icon: Icons.assignment_ind_outlined,
+          title: 'Asignaciones',
+          text: 'Asignar activos a colaboradores',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AsignacionesPage(
+                activos: activos, personal: personal, asignaciones: asignaciones, onChanged: onChanged))),
+        ),
+        _Option(
+          icon: Icons.build_outlined,
+          title: 'Mantenimientos',
+          text: 'Registrar mantenimiento de activos',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MantenimientosPage(
+                activos: activos, proveedores: proveedores, mantenimientos: mantenimientos, onChanged: onChanged))),
+        ),
+        _Option(
+          icon: Icons.category_outlined,
+          title: 'Catálogos',
+          text: 'Categorías, roles, proveedores y estados',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CatalogosPage(
+                proveedores: proveedores,
+                categorias: categorias,
+                roles: roles,
+                estadosActivo: estadosActivo,
+                estadosPersonal: estadosPersonal,
+                onChanged: onChanged,
+              ))),
+        ),
+        _Option(icon: Icons.history, title: 'Historial administrativo', text: 'Consultar cambios registrados', onTap: () => _mensaje(context, 'El historial requiere la API REST del servidor.')),
         const _SectionTitle('Sincronización'),
         Card(color: const Color(0xFFE8F3F3), child: const Padding(padding: EdgeInsets.all(16), child: Text('La interfaz está portada a Flutter. Para guardar datos en Railway hace falta una API REST autenticada en el servidor Java; la app móvil no debe acceder directamente a MySQL.'))),
       ]);
+}
+
+// ==================== ASIGNACIONES ====================
+
+class AsignacionesPage extends StatefulWidget {
+  const AsignacionesPage({super.key, required this.activos, required this.personal, required this.asignaciones, required this.onChanged});
+  final List<Activo> activos;
+  final List<Empleado> personal;
+  final List<Asignacion> asignaciones;
+  final VoidCallback onChanged;
+  @override
+  State<AsignacionesPage> createState() => _AsignacionesPageState();
+}
+
+class _AsignacionesPageState extends State<AsignacionesPage> {
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Asignaciones')),
+        floatingActionButton: FloatingActionButton.extended(onPressed: _nuevaAsignacion, icon: const Icon(Icons.add), label: const Text('Asignación')),
+        body: widget.asignaciones.isEmpty
+            ? const Center(child: Text('Aún no hay asignaciones registradas'))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: widget.asignaciones.length,
+                itemBuilder: (_, i) {
+                  final a = widget.asignaciones[i];
+                  final devuelto = a.fechaDevolucion != null;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: const Icon(Icons.assignment_ind_outlined),
+                      title: Text('${a.activo.nombre} → ${a.empleado.nombre}'),
+                      subtitle: Text('Asignado: ${_fecha(a.fechaAsignacion)}'
+                          '${devuelto ? '\nDevuelto: ${_fecha(a.fechaDevolucion!)}' : ''}'
+                          '${a.observaciones.isNotEmpty ? '\n${a.observaciones}' : ''}'),
+                      isThreeLine: true,
+                      trailing: devuelto
+                          ? const Chip(label: Text('Devuelto', style: TextStyle(fontSize: 11)), side: BorderSide.none)
+                          : TextButton(onPressed: () => _marcarDevuelto(a), child: const Text('Devolver')),
+                    ),
+                  );
+                },
+              ),
+      );
+
+  void _marcarDevuelto(Asignacion a) {
+    setState(() => a.fechaDevolucion = DateTime.now());
+    widget.activos.firstWhere((x) => x.codigo == a.activo.codigo).estado = 'Disponible';
+    widget.onChanged();
+  }
+
+  void _nuevaAsignacion() async {
+    if (widget.activos.isEmpty || widget.personal.isEmpty) {
+      _mensaje(context, 'Debes tener al menos un activo y un colaborador registrados.');
+      return;
+    }
+    final nueva = await showModalBottomSheet<Asignacion>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AsignacionForm(activos: widget.activos, personal: widget.personal),
+    );
+    if (nueva != null) {
+      setState(() => widget.asignaciones.add(nueva));
+      nueva.activo.estado = 'Asignado';
+      widget.onChanged();
+    }
+  }
+}
+
+class _AsignacionForm extends StatefulWidget {
+  const _AsignacionForm({required this.activos, required this.personal});
+  final List<Activo> activos;
+  final List<Empleado> personal;
+  @override
+  State<_AsignacionForm> createState() => _AsignacionFormState();
+}
+
+class _AsignacionFormState extends State<_AsignacionForm> {
+  final _form = GlobalKey<FormState>();
+  final _obs = TextEditingController();
+  late Activo _activo = widget.activos.first;
+  late Empleado _empleado = widget.personal.first;
+
+  @override
+  Widget build(BuildContext context) => _BottomForm(
+        title: 'Nueva asignación',
+        child: Form(
+          key: _form,
+          child: Column(children: [
+            DropdownButtonFormField(
+              value: _activo,
+              decoration: const InputDecoration(labelText: 'Activo'),
+              items: widget.activos.map((a) => DropdownMenuItem(value: a, child: Text('${a.codigo} · ${a.nombre}'))).toList(),
+              onChanged: (v) => setState(() => _activo = v!),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField(
+              value: _empleado,
+              decoration: const InputDecoration(labelText: 'Colaborador'),
+              items: widget.personal.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre))).toList(),
+              onChanged: (v) => setState(() => _empleado = v!),
+            ),
+            const SizedBox(height: 12),
+            _field(_obs, 'Observaciones (opcional)'),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                context,
+                Asignacion(activo: _activo, empleado: _empleado, fechaAsignacion: DateTime.now(), observaciones: _obs.text.trim()),
+              ),
+              child: const Text('Guardar asignación'),
+            ),
+          ]),
+        ),
+      );
+  @override
+  void dispose() {
+    _obs.dispose();
+    super.dispose();
+  }
+}
+
+// ==================== MANTENIMIENTOS ====================
+
+class MantenimientosPage extends StatefulWidget {
+  const MantenimientosPage({super.key, required this.activos, required this.proveedores, required this.mantenimientos, required this.onChanged});
+  final List<Activo> activos;
+  final List<Proveedor> proveedores;
+  final List<Mantenimiento> mantenimientos;
+  final VoidCallback onChanged;
+  @override
+  State<MantenimientosPage> createState() => _MantenimientosPageState();
+}
+
+class _MantenimientosPageState extends State<MantenimientosPage> {
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Mantenimientos')),
+        floatingActionButton: FloatingActionButton.extended(onPressed: _nuevoMantenimiento, icon: const Icon(Icons.add), label: const Text('Mantenimiento')),
+        body: widget.mantenimientos.isEmpty
+            ? const Center(child: Text('Aún no hay mantenimientos registrados'))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: widget.mantenimientos.length,
+                itemBuilder: (_, i) {
+                  final m = widget.mantenimientos[i];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: const Icon(Icons.build_outlined),
+                      title: Text(m.activo.nombre),
+                      subtitle: Text('${_fecha(m.fecha)} · ${m.proveedor.nombre}\n${_pesos(m.costo)}${m.descripcion.isNotEmpty ? '\n${m.descripcion}' : ''}'),
+                      isThreeLine: true,
+                    ),
+                  );
+                },
+              ),
+      );
+
+  void _nuevoMantenimiento() async {
+    if (widget.activos.isEmpty || widget.proveedores.isEmpty) {
+      _mensaje(context, 'Debes tener al menos un activo y un proveedor registrados.');
+      return;
+    }
+    final nuevo = await showModalBottomSheet<Mantenimiento>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _MantenimientoForm(activos: widget.activos, proveedores: widget.proveedores),
+    );
+    if (nuevo != null) {
+      setState(() => widget.mantenimientos.add(nuevo));
+      nuevo.activo.estado = 'En mantenimiento';
+      widget.onChanged();
+    }
+  }
+}
+
+class _MantenimientoForm extends StatefulWidget {
+  const _MantenimientoForm({required this.activos, required this.proveedores});
+  final List<Activo> activos;
+  final List<Proveedor> proveedores;
+  @override
+  State<_MantenimientoForm> createState() => _MantenimientoFormState();
+}
+
+class _MantenimientoFormState extends State<_MantenimientoForm> {
+  final _form = GlobalKey<FormState>();
+  final _costo = TextEditingController();
+  final _descripcion = TextEditingController();
+  late Activo _activo = widget.activos.first;
+  late Proveedor _proveedor = widget.proveedores.first;
+
+  @override
+  Widget build(BuildContext context) => _BottomForm(
+        title: 'Nuevo mantenimiento',
+        child: Form(
+          key: _form,
+          child: Column(children: [
+            DropdownButtonFormField(
+              value: _activo,
+              decoration: const InputDecoration(labelText: 'Activo'),
+              items: widget.activos.map((a) => DropdownMenuItem(value: a, child: Text('${a.codigo} · ${a.nombre}'))).toList(),
+              onChanged: (v) => setState(() => _activo = v!),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField(
+              value: _proveedor,
+              decoration: const InputDecoration(labelText: 'Proveedor'),
+              items: widget.proveedores.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre))).toList(),
+              onChanged: (v) => setState(() => _proveedor = v!),
+            ),
+            const SizedBox(height: 12),
+            _field(_costo, 'Costo', type: TextInputType.number),
+            const SizedBox(height: 12),
+            _field(_descripcion, 'Descripción (opcional)'),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                if (_form.currentState!.validate()) {
+                  Navigator.pop(
+                    context,
+                    Mantenimiento(
+                      activo: _activo,
+                      proveedor: _proveedor,
+                      fecha: DateTime.now(),
+                      costo: int.tryParse(_costo.text) ?? 0,
+                      descripcion: _descripcion.text.trim(),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Guardar mantenimiento'),
+            ),
+          ]),
+        ),
+      );
+  @override
+  void dispose() {
+    _costo.dispose();
+    _descripcion.dispose();
+    super.dispose();
+  }
+}
+
+// ==================== CATÁLOGOS ====================
+
+class CatalogosPage extends StatefulWidget {
+  const CatalogosPage({
+    super.key,
+    required this.proveedores,
+    required this.categorias,
+    required this.roles,
+    required this.estadosActivo,
+    required this.estadosPersonal,
+    required this.onChanged,
+  });
+  final List<Proveedor> proveedores;
+  final List<String> categorias, roles, estadosActivo, estadosPersonal;
+  final VoidCallback onChanged;
+  @override
+  State<CatalogosPage> createState() => _CatalogosPageState();
+}
+
+class _CatalogosPageState extends State<CatalogosPage> {
+  @override
+  Widget build(BuildContext context) => DefaultTabController(
+        length: 4,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Catálogos'),
+            bottom: const TabBar(tabs: [
+              Tab(text: 'Categorías'),
+              Tab(text: 'Roles'),
+              Tab(text: 'Proveedores'),
+              Tab(text: 'Estados'),
+            ]),
+          ),
+          body: TabBarView(children: [
+            _ListaSimple(titulo: 'categoría', items: widget.categorias, onChanged: widget.onChanged),
+            _ListaSimple(titulo: 'rol', items: widget.roles, onChanged: widget.onChanged),
+            _ListaProveedores(proveedores: widget.proveedores, onChanged: widget.onChanged),
+            DefaultTabController(
+              length: 2,
+              child: Column(children: [
+                const TabBar(tabs: [Tab(text: 'De activos'), Tab(text: 'De personal')]),
+                Expanded(
+                  child: TabBarView(children: [
+                    _ListaSimple(titulo: 'estado de activo', items: widget.estadosActivo, onChanged: widget.onChanged),
+                    _ListaSimple(titulo: 'estado de personal', items: widget.estadosPersonal, onChanged: widget.onChanged),
+                  ]),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      );
+}
+
+class _ListaSimple extends StatefulWidget {
+  const _ListaSimple({required this.titulo, required this.items, required this.onChanged});
+  final String titulo;
+  final List<String> items;
+  final VoidCallback onChanged;
+  @override
+  State<_ListaSimple> createState() => _ListaSimpleState();
+}
+
+class _ListaSimpleState extends State<_ListaSimple> {
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        floatingActionButton: FloatingActionButton(onPressed: _agregar, child: const Icon(Icons.add)),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: widget.items.length,
+          itemBuilder: (_, i) => Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              title: Text(widget.items[i]),
+              trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => setState(() {
+                    widget.items.removeAt(i);
+                    widget.onChanged();
+                  })),
+            ),
+          ),
+        ),
+      );
+
+  void _agregar() async {
+    final controlador = TextEditingController();
+    final valor = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _BottomForm(
+        title: 'Nueva ${widget.titulo}',
+        child: Column(children: [
+          _field(controlador, 'Descripción'),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: () => controlador.text.trim().isEmpty ? null : Navigator.pop(context, controlador.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ]),
+      ),
+    );
+    if (valor != null && valor.isNotEmpty) {
+      setState(() => widget.items.add(valor));
+      widget.onChanged();
+    }
+  }
+}
+
+class _ListaProveedores extends StatefulWidget {
+  const _ListaProveedores({required this.proveedores, required this.onChanged});
+  final List<Proveedor> proveedores;
+  final VoidCallback onChanged;
+  @override
+  State<_ListaProveedores> createState() => _ListaProveedoresState();
+}
+
+class _ListaProveedoresState extends State<_ListaProveedores> {
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        floatingActionButton: FloatingActionButton(onPressed: _agregar, child: const Icon(Icons.add)),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: widget.proveedores.length,
+          itemBuilder: (_, i) {
+            final p = widget.proveedores[i];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: const Icon(Icons.local_shipping_outlined),
+                title: Text(p.nombre),
+                subtitle: Text('${p.telefono} · ${p.direccion}${p.email.isNotEmpty ? '\n${p.email}' : ''}'),
+                isThreeLine: true,
+                trailing: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => setState(() {
+                      widget.proveedores.removeAt(i);
+                      widget.onChanged();
+                    })),
+              ),
+            );
+          },
+        ),
+      );
+
+  void _agregar() async {
+    final nombre = TextEditingController();
+    final telefono = TextEditingController();
+    final direccion = TextEditingController();
+    final email = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final nuevo = await showModalBottomSheet<Proveedor>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _BottomForm(
+        title: 'Nuevo proveedor',
+        child: Form(
+          key: form,
+          child: Column(children: [
+            _field(nombre, 'Nombre'),
+            const SizedBox(height: 12),
+            _field(telefono, 'Teléfono', type: TextInputType.phone),
+            const SizedBox(height: 12),
+            _field(direccion, 'Dirección'),
+            const SizedBox(height: 12),
+            TextFormField(controller: email, decoration: const InputDecoration(labelText: 'Email (opcional)')),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: () {
+                if (form.currentState!.validate()) {
+                  Navigator.pop(
+                    context,
+                    Proveedor(nombre: nombre.text.trim(), telefono: telefono.text.trim(), direccion: direccion.text.trim(), email: email.text.trim()),
+                  );
+                }
+              },
+              child: const Text('Guardar proveedor'),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (nuevo != null) {
+      setState(() => widget.proveedores.add(nuevo));
+      widget.onChanged();
+    }
+  }
 }
 
 class _ActivoForm extends StatefulWidget { const _ActivoForm(); @override State<_ActivoForm> createState() => _ActivoFormState(); }
@@ -322,9 +814,27 @@ class _DetalleActivo extends StatelessWidget { const _DetalleActivo({required th
 class _MetricCard extends StatelessWidget { const _MetricCard({required this.icon, required this.label, required this.value, required this.color}); final IconData icon; final String label, value; final Color color; @override Widget build(BuildContext context) => SizedBox(width: 165, child: Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color), const SizedBox(height: 14), Text(value, style: Theme.of(context).textTheme.headlineSmall), Text(label)])))); }
 class _EstadoChip extends StatelessWidget { const _EstadoChip(this.estado); final String estado; @override Widget build(BuildContext context) { final color = estado == 'Disponible' || estado == 'Activo' ? Colors.green : Colors.orange; return Chip(label: Text(estado, style: const TextStyle(fontSize: 11)), side: BorderSide.none, backgroundColor: color.withOpacity(.14)); } }
 class _SectionTitle extends StatelessWidget { const _SectionTitle(this.text); final String text; @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 8, bottom: 8), child: Text(text, style: Theme.of(context).textTheme.titleLarge)); }
-class _Option extends StatelessWidget { const _Option({required this.icon, required this.title, required this.text}); final IconData icon; final String title, text; @override Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon), title: Text(title), subtitle: Text(text), trailing: const Icon(Icons.chevron_right), onTap: () => _mensaje(context, '$title estará conectado cuando la API REST esté disponible.'))); }
-class Activo { Activo({required this.codigo, required this.nombre, required this.categoria, required this.estado, required this.valor}); final String codigo, nombre, categoria, estado; final int valor; }
-class Empleado { Empleado({required this.nombre, required this.documento, required this.rol, required this.estado}); final String nombre, documento, rol, estado; }
+class _Option extends StatelessWidget { const _Option({required this.icon, required this.title, required this.text, this.onTap}); final IconData icon; final String title, text; final VoidCallback? onTap; @override Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon), title: Text(title), subtitle: Text(text), trailing: const Icon(Icons.chevron_right), onTap: onTap ?? () => _mensaje(context, '$title estará conectado cuando la API REST esté disponible.'))); }
+class Activo { Activo({required this.codigo, required this.nombre, required this.categoria, required this.estado, required this.valor}); final String codigo, nombre, categoria; String estado; final int valor; }
+class Empleado { Empleado({required this.nombre, required this.documento, required this.rol, required this.estado}); final String nombre, documento, rol; String estado; }
+class Proveedor { Proveedor({required this.nombre, required this.telefono, required this.direccion, required this.email}); final String nombre, telefono, direccion, email; }
+class Asignacion {
+  Asignacion({required this.activo, required this.empleado, required this.fechaAsignacion, this.fechaDevolucion, this.observaciones = ''});
+  final Activo activo;
+  final Empleado empleado;
+  final DateTime fechaAsignacion;
+  DateTime? fechaDevolucion;
+  final String observaciones;
+}
+class Mantenimiento {
+  Mantenimiento({required this.activo, required this.proveedor, required this.fecha, required this.costo, this.descripcion = ''});
+  final Activo activo;
+  final Proveedor proveedor;
+  final DateTime fecha;
+  final int costo;
+  final String descripcion;
+}
 Widget _field(TextEditingController controller, String label, {TextInputType? type}) => TextFormField(controller: controller, keyboardType: type, decoration: InputDecoration(labelText: label), validator: (v) => v == null || v.trim().isEmpty ? 'Este campo es obligatorio' : null);
 String _pesos(int valor) => '\$ ${valor.toString().replaceAllMapped(RegExp(r'(?=(\d{3})+(?!\d))'), (m) => '.')}';
+String _fecha(DateTime f) => '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
 void _mensaje(BuildContext context, String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
