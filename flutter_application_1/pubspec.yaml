@@ -1,5 +1,5 @@
-name: Optigest
-description: A new Flutter project.
+name: optigest
+description: Aplicación móvil para la gestión de activos y personal.
 
 publish_to: "none"
 
@@ -19,3 +19,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/optigest_logo.png

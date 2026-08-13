@@ -11,10 +11,40 @@ class OptiGestApp extends StatelessWidget {
         title: 'OptiGest',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0D6265)),
-          scaffoldBackgroundColor: const Color(0xFFF6F8F9),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF0D47A1),
+            primary: const Color(0xFF0D47A1),
+            secondary: const Color(0xFF1565D8),
+          ),
+          scaffoldBackgroundColor: const Color(0xFFF7F9FC),
+          appBarTheme: const AppBarTheme(
+            centerTitle: true,
+            backgroundColor: Color(0xFF0D47A1),
+            foregroundColor: Colors.white,
+          ),
+          cardTheme: const CardThemeData(
+            elevation: 1,
+            surfaceTintColor: Colors.white,
+            margin: EdgeInsets.zero,
+          ),
+          filledButtonTheme: FilledButtonThemeData(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0D47A1),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          navigationBarTheme: const NavigationBarThemeData(
+            backgroundColor: Colors.white,
+            indicatorColor: Color(0xFFDCE8FF),
+            labelTextStyle: MaterialStatePropertyAll(TextStyle(fontWeight: FontWeight.w600)),
+            iconTheme: MaterialStatePropertyAll(IconThemeData(color: Color(0xFF0D47A1))),
+          ),
           inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderSide: BorderSide(color: Color(0xFF90A4C7)),
+            ),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -67,11 +97,16 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const CircleAvatar(
-                            radius: 38,
-                            backgroundColor: Color(0xFF0D6265),
-                            child: Icon(Icons.inventory_2_outlined,
-                                color: Colors.white, size: 42),
+                          Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: Image.asset(
+                                'assets/optigest_logo.png',
+                                width: 170,
+                                height: 170,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 20),
                           Text('OptiGest',
@@ -134,6 +169,88 @@ class _LoginPageState extends State<LoginPage> {
       );
 }
 
+class RecuperarContrasenaPage extends StatefulWidget {
+  const RecuperarContrasenaPage({super.key});
+
+  @override
+  State<RecuperarContrasenaPage> createState() => _RecuperarContrasenaPageState();
+}
+
+class _RecuperarContrasenaPageState extends State<RecuperarContrasenaPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _documento = TextEditingController();
+  final _correo = TextEditingController();
+  bool _solicitudEnviada = false;
+
+  @override
+  void dispose() {
+    _documento.dispose();
+    _correo.dispose();
+    super.dispose();
+  }
+
+  void _enviarSolicitud() {
+    if (_formKey.currentState!.validate()) setState(() => _solicitudEnviada = true);
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Recuperar contraseña')),
+        body: SafeArea(child: Center(child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: Card(child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: _solicitudEnviada ? _confirmacion() : _formulario(),
+            )),
+          ),
+        ))),
+      );
+
+  Widget _formulario() => Form(
+        key: _formKey,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Icon(Icons.lock_reset_outlined, size: 58, color: Color(0xFF0D47A1)),
+          const SizedBox(height: 18),
+          Text('¿Olvidaste tu contraseña?', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          const Text('Ingresa tus datos y te enviaremos las instrucciones de recuperación.', textAlign: TextAlign.center),
+          const SizedBox(height: 26),
+          TextFormField(
+            controller: _documento,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Número de documento', prefixIcon: Icon(Icons.badge_outlined)),
+            validator: (valor) => valor == null || valor.trim().isEmpty ? 'Ingresa tu documento' : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _correo,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Correo registrado', prefixIcon: Icon(Icons.email_outlined)),
+            validator: (valor) {
+              if (valor == null || valor.trim().isEmpty) return 'Ingresa tu correo';
+              return valor.contains('@') ? null : 'Ingresa un correo válido';
+            },
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(onPressed: _enviarSolicitud, icon: const Icon(Icons.send_outlined), label: const Text('Enviar instrucciones')),
+          const SizedBox(height: 8),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Volver al inicio de sesión')),
+        ]),
+      );
+
+  Widget _confirmacion() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Icon(Icons.mark_email_read_outlined, size: 64, color: Color(0xFF0D47A1)),
+        const SizedBox(height: 18),
+        Text('Solicitud enviada', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 10),
+        Text('Enviamos las instrucciones a ${_correo.text.trim()}. Revisa tu bandeja de entrada y el correo no deseado.', textAlign: TextAlign.center),
+        const SizedBox(height: 24),
+        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Volver a iniciar sesión')),
+      ]);
+}
+
 class OptiGestHome extends StatefulWidget {
   const OptiGestHome({super.key});
 
@@ -186,7 +303,17 @@ class _OptiGestHomeState extends State<OptiGestHome> {
     const titulos = ['Panel de control', 'Gestión de activos', 'Gestión de personal', 'Más opciones'];
     return Scaffold(
       appBar: AppBar(
-        title: Text(titulos[_pagina]),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset('assets/optigest_logo.png', width: 30, height: 30),
+            ),
+            const SizedBox(width: 10),
+            Flexible(child: Text(titulos[_pagina], overflow: TextOverflow.ellipsis)),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Mi perfil',
@@ -273,7 +400,15 @@ class _ActivosPageState extends State<ActivosPage> {
 
   void _nuevoActivo() async {
     final nuevo = await showModalBottomSheet<Activo>(context: context, isScrollControlled: true, builder: (_) => const _ActivoForm());
-    if (nuevo != null) { widget.activos.add(nuevo); widget.onChanged(); setState(() {}); }
+    if (nuevo != null) {
+      if (widget.activos.any((activo) => activo.codigo.toLowerCase() == nuevo.codigo.toLowerCase())) {
+        _mensaje(context, 'Ya existe un activo con ese código.');
+        return;
+      }
+      widget.activos.add(nuevo);
+      widget.onChanged();
+      setState(() {});
+    }
   }
   void _detalleActivo(Activo activo) => showModalBottomSheet<void>(context: context, builder: (_) => _DetalleActivo(activo: activo));
 }
@@ -299,7 +434,18 @@ class _PersonalPageState extends State<PersonalPage> {
       ]),
     );
   }
-  void _nuevoEmpleado() async { final nuevo = await showModalBottomSheet<Empleado>(context: context, isScrollControlled: true, builder: (_) => const _EmpleadoForm()); if (nuevo != null) { widget.personal.add(nuevo); widget.onChanged(); setState(() {}); } }
+  void _nuevoEmpleado() async {
+    final nuevo = await showModalBottomSheet<Empleado>(context: context, isScrollControlled: true, builder: (_) => const _EmpleadoForm());
+    if (nuevo != null) {
+      if (widget.personal.any((persona) => persona.documento == nuevo.documento)) {
+        _mensaje(context, 'Ya existe una persona con ese documento.');
+        return;
+      }
+      widget.personal.add(nuevo);
+      widget.onChanged();
+      setState(() {});
+    }
+  }
 }
 
 class MasPage extends StatelessWidget {
@@ -410,14 +556,15 @@ class _AsignacionesPageState extends State<AsignacionesPage> {
   }
 
   void _nuevaAsignacion() async {
-    if (widget.activos.isEmpty || widget.personal.isEmpty) {
-      _mensaje(context, 'Debes tener al menos un activo y un colaborador registrados.');
+    final disponibles = widget.activos.where((activo) => activo.estado == 'Disponible').toList();
+    if (disponibles.isEmpty || widget.personal.isEmpty) {
+      _mensaje(context, 'Debes tener un activo disponible y un colaborador registrados.');
       return;
     }
     final nueva = await showModalBottomSheet<Asignacion>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _AsignacionForm(activos: widget.activos, personal: widget.personal),
+      builder: (_) => _AsignacionForm(activos: disponibles, personal: widget.personal),
     );
     if (nueva != null) {
       setState(() => widget.asignaciones.add(nueva));
@@ -511,6 +658,9 @@ class _MantenimientosPageState extends State<MantenimientosPage> {
                       title: Text(m.activo.nombre),
                       subtitle: Text('${_fecha(m.fecha)} · ${m.proveedor.nombre}\n${_pesos(m.costo)}${m.descripcion.isNotEmpty ? '\n${m.descripcion}' : ''}'),
                       isThreeLine: true,
+                      trailing: m.finalizado
+                          ? const Chip(label: Text('Finalizado', style: TextStyle(fontSize: 11)), side: BorderSide.none)
+                          : TextButton(onPressed: () => _finalizar(m), child: const Text('Finalizar')),
                     ),
                   );
                 },
@@ -518,20 +668,28 @@ class _MantenimientosPageState extends State<MantenimientosPage> {
       );
 
   void _nuevoMantenimiento() async {
-    if (widget.activos.isEmpty || widget.proveedores.isEmpty) {
-      _mensaje(context, 'Debes tener al menos un activo y un proveedor registrados.');
+    final disponibles = widget.activos.where((activo) => activo.estado == 'Disponible').toList();
+    if (disponibles.isEmpty || widget.proveedores.isEmpty) {
+      _mensaje(context, 'Debes tener un activo disponible y un proveedor registrados.');
       return;
     }
     final nuevo = await showModalBottomSheet<Mantenimiento>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _MantenimientoForm(activos: widget.activos, proveedores: widget.proveedores),
+      builder: (_) => _MantenimientoForm(activos: disponibles, proveedores: widget.proveedores),
     );
     if (nuevo != null) {
       setState(() => widget.mantenimientos.add(nuevo));
       nuevo.activo.estado = 'En mantenimiento';
       widget.onChanged();
     }
+  }
+
+  void _finalizar(Mantenimiento mantenimiento) {
+    setState(() => mantenimiento.finalizado = true);
+    mantenimiento.activo.estado = 'Disponible';
+    widget.onChanged();
+    _mensaje(context, 'Mantenimiento finalizado; el activo vuelve a estar disponible.');
   }
 }
 
@@ -827,14 +985,21 @@ class Asignacion {
   final String observaciones;
 }
 class Mantenimiento {
-  Mantenimiento({required this.activo, required this.proveedor, required this.fecha, required this.costo, this.descripcion = ''});
+  Mantenimiento({required this.activo, required this.proveedor, required this.fecha, required this.costo, this.descripcion = '', this.finalizado = false});
   final Activo activo;
   final Proveedor proveedor;
   final DateTime fecha;
   final int costo;
   final String descripcion;
+  bool finalizado;
 }
 Widget _field(TextEditingController controller, String label, {TextInputType? type}) => TextFormField(controller: controller, keyboardType: type, decoration: InputDecoration(labelText: label), validator: (v) => v == null || v.trim().isEmpty ? 'Este campo es obligatorio' : null);
 String _pesos(int valor) => '\$ ${valor.toString().replaceAllMapped(RegExp(r'(?=(\d{3})+(?!\d))'), (m) => '.')}';
 String _fecha(DateTime f) => '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
-void _mensaje(BuildContext context, String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+void _mensaje(BuildContext context, String texto) {
+  if (texto.contains('endpoint de API')) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RecuperarContrasenaPage()));
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+}

@@ -1,34 +1,17 @@
-# OptiGest móvil (Flutter nativo)
+# OptiGest móvil
 
-Este proyecto porta a Flutter las principales áreas de OptiGest60: inicio de
-sesión, panel de control, gestión de activos, gestión de personal, registro de
-activos y personal, y accesos a asignaciones, catálogos, mantenimiento e
-historial administrativo.
+Port de OptiGest a Flutter, sin WebView.
 
-No usa `WebView` ni `webview_flutter`. El error de
-`error.isForMainFrame` queda eliminado junto con esa dependencia.
+## Funcionalidades
 
-## Importante: conexión a datos
+- Inicio de sesión con validación de campos.
+- Panel de indicadores y búsqueda de activos y personal.
+- Registro de activos y colaboradores con prevención de duplicados.
+- Asignación y devolución de activos; solo se pueden asignar activos disponibles.
+- Registro y finalización de mantenimientos; al finalizar, el activo vuelve a estar disponible.
+- Catálogos de categorías, roles, proveedores y estados.
 
-El proyecto de NetBeans recibido es JSP/Servlet y sus rutas (`/Iniciar`,
-`/GuardarActivo`, etc.) devuelven páginas HTML; no contiene una API REST/JSON.
-Por seguridad una aplicación Android no debe conectarse directamente a MySQL:
-la URL, usuario y contraseña se podrían extraer del APK.
-
-La interfaz Flutter funciona hoy con datos iniciales y altas temporales en
-memoria. Para que guarde y consulte los mismos datos de Railway se debe exponer
-una API autenticada en el servidor Java, por ejemplo:
-
-```
-POST /api/v1/auth/login
-GET  /api/v1/activos
-POST /api/v1/activos
-GET  /api/v1/personal
-POST /api/v1/personal
-```
-
-Luego se reemplaza el estado temporal por peticiones HTTPS a esa API. No hay que
-modificar ni publicar las credenciales de MySQL en Flutter.
+Los datos actuales son locales y de demostración. La versión Java incluye solo el inicio de sesión JSON (`/api/login`); para sincronizar todos los módulos hace falta ampliar esa API REST. No se deben incluir credenciales de MySQL en la aplicación móvil.
 
 ## Ejecutar
 
@@ -37,7 +20,7 @@ flutter pub get
 flutter run
 ```
 
-Para el APK:
+Para generar Android:
 
 ```bash
 flutter build apk --release

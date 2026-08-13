@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:optigest/main.dart';
 
 void main() {
-  test('Aplicación inicia correctamente', () {
-    expect(true, true);
+  testWidgets('muestra el inicio de sesión de OptiGest', (tester) async {
+    await tester.pumpWidget(const OptiGestApp());
+
+    expect(find.text('OptiGest'), findsOneWidget);
+    expect(find.text('Iniciar sesión'), findsOneWidget);
   });
 }
