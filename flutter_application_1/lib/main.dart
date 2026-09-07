@@ -368,6 +368,7 @@ class PerfilPage extends StatelessWidget {
     final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : '?';
     final datos = usuario.entries
         .where((entry) => !_isPrivateUserField(entry.key))
+        .where((entry) => !_isProfileMetadataField(entry.key))
         .where((entry) => entry.value != null && entry.value.toString().trim().isNotEmpty)
         .toList();
 
@@ -437,6 +438,16 @@ String _value(Object? value) => value is Map || value is List ? jsonEncode(value
 
 bool _isPrivateUserField(Object key) => const {'password', 'contrasena', 'contraseña', 'token', 'accesstoken', 'access_token'}
     .contains(key.toString().toLowerCase());
+
+bool _isProfileMetadataField(Object key) => const {
+      'id',
+      'rolid',
+      'rol_id',
+      'tipoacceso',
+      'tipo_acceso',
+      'esadministrador',
+      'es_administrador',
+    }.contains(key.toString().toLowerCase());
 
 enum TipoBusqueda { activos, personal, asignaciones }
 
