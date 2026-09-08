@@ -36,7 +36,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: BusquedaPage(
         tipo: TipoBusqueda.activos,
-        client: mockClient,
+        clientOverride: mockClient,
         baseUrlOverride: baseUrl,
       ),
     ));
