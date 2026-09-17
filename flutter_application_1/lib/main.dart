@@ -3,8 +3,34 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const String baseUrl ='https://zooming-smile-production-7aa3.up.railway.app';
+const String baseUrl = 'https://zooming-smile-production-7aa3.up.railway.app';
 const String apiEndpoint = '$baseUrl/api/Mobile';
+const Map<String, String> _accentMap = {
+  'á': 'a',
+  'à': 'a',
+  'ä': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'å': 'a',
+  'é': 'e',
+  'è': 'e',
+  'ë': 'e',
+  'ê': 'e',
+  'í': 'i',
+  'ì': 'i',
+  'ï': 'i',
+  'î': 'i',
+  'ó': 'o',
+  'ò': 'o',
+  'ö': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ú': 'u',
+  'ù': 'u',
+  'ü': 'u',
+  'û': 'u',
+  'ñ': 'n',
+};
 
 void main() {
   runApp(const OptiGestApp());
@@ -79,7 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
             }),
           )
           .timeout(const Duration(seconds: 15));
-
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
@@ -255,9 +280,18 @@ class _InicioScreenState extends State<InicioScreen> {
         usuario: widget.usuario,
         abrirPagina: (pagina) => setState(() => _pagina = pagina),
       ),
-      const BusquedaPage(tipo: TipoBusqueda.activos),
-      const BusquedaPage(tipo: TipoBusqueda.personal),
-      const BusquedaPage(tipo: TipoBusqueda.asignaciones),
+      const BusquedaPage(
+        key: ValueKey(TipoBusqueda.activos),
+        tipo: TipoBusqueda.activos,
+      ),
+      const BusquedaPage(
+        key: ValueKey(TipoBusqueda.personal),
+        tipo: TipoBusqueda.personal,
+      ),
+      const BusquedaPage(
+        key: ValueKey(TipoBusqueda.asignaciones),
+        tipo: TipoBusqueda.asignaciones,
+      ),
     ];
 
     return Scaffold(
@@ -407,9 +441,16 @@ class NavigationCard extends StatelessWidget {
 enum TipoBusqueda { activos, personal, asignaciones }
 
 class BusquedaPage extends StatefulWidget {
-  const BusquedaPage({super.key, required this.tipo});
+  const BusquedaPage({
+    super.key,
+    required this.tipo,
+    this.clientOverride,
+    this.baseUrlOverride,
+  });
 
   final TipoBusqueda tipo;
+  final http.Client? clientOverride;
+  final String? baseUrlOverride;
 
   @override
   State<BusquedaPage> createState() => _BusquedaPageState();
@@ -422,11 +463,28 @@ class _BusquedaPageState extends State<BusquedaPage> {
   bool _cargando = false;
   String? _error;
   List<Map<String, dynamic>> _resultados = [];
+  List<Map<String, dynamic>> _todosLosResultados = [];
 
   @override
   void initState() {
     super.initState();
     _consultar(mostrarTodo: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant BusquedaPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.tipo != widget.tipo) {
+      _valorController.clear();
+      setState(() {
+        _campo = null;
+        _error = null;
+        _resultados = [];
+        _todosLosResultados = [];
+      });
+      _consultar(mostrarTodo: true);
+    }
   }
 
   @override
@@ -473,8 +531,9 @@ class _BusquedaPageState extends State<BusquedaPage> {
         ];
       case TipoBusqueda.asignaciones:
         return const [
-          DropdownMenuItem(value: 'documento', child: Text('Documento')),
-          DropdownMenuItem(value: 'activo', child: Text('Activo o código')),
+          DropdownMenuItem(value: 'personal', child: Text('Nombre del personal')),
+          DropdownMenuItem(value: 'activo', child: Text('Nombre del activo')),
+          DropdownMenuItem(value: 'codigo', child: Text('Código del activo')),
         ];
     }
   }
@@ -500,39 +559,30 @@ class _BusquedaPageState extends State<BusquedaPage> {
         'accion': _accion,
       };
 
-      if (!mostrarTodo) {
-        solicitud['campo'] = _campo!;
-        solicitud['valor'] = _valorController.text.trim();
-      }
+      // Las búsquedas filtradas se hacen localmente para ignorar tildes y mayúsculas.
 
-      final response = await http
-          .post(
-            Uri.parse(apiEndpoint),
-            headers: const {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode(solicitud),
-          )
-          .timeout(const Duration(seconds: 20));
+      http.Response response;
+      dynamic data;
 
-      final data = jsonDecode(response.body);
+      response = await _consultarRutaMobile(solicitud);
+      data = jsonDecode(response.body);
 
       if (!mounted) return;
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300 &&
-          data is Map &&
-          data['ok'] == true) {
-        final lista = data['data'];
+      if (_respuestaExitosa(response, data)) {
+        final lista = _extraerListaResultados(data);
 
         setState(() {
-          if (lista is List) {
-            _resultados = lista
+          if (lista != null) {
+            _todosLosResultados = lista
                 .whereType<Map>()
                 .map((item) => Map<String, dynamic>.from(item))
                 .toList();
+            _resultados = mostrarTodo
+                ? _todosLosResultados
+                : _filtrarResultadosLocales(_todosLosResultados);
           } else {
+            _todosLosResultados = [];
             _resultados = [];
           }
         });
@@ -559,6 +609,117 @@ class _BusquedaPageState extends State<BusquedaPage> {
       if (mounted) {
         setState(() => _cargando = false);
       }
+    }
+  }
+
+  Future<http.Response> _consultarRutaMobile(
+    Map<String, dynamic> solicitud,
+  ) {
+    final servidor = widget.baseUrlOverride ?? baseUrl;
+    final uri = Uri.parse('$servidor/api/Mobile');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    final body = jsonEncode(solicitud);
+
+    final client = widget.clientOverride;
+    final request = client == null
+        ? http.post(uri, headers: headers, body: body)
+        : client.post(uri, headers: headers, body: body);
+
+    return request.timeout(const Duration(seconds: 20));
+  }
+
+  bool _respuestaExitosa(http.Response response, dynamic data) {
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    if (data is List) return true;
+    if (data is! Map) return false;
+
+    final ok = data['ok'];
+    final success = data['success'];
+    return ok == true || success == true || _extraerListaResultados(data) != null;
+  }
+
+  List<dynamic>? _extraerListaResultados(dynamic data) {
+    if (data is List) return data;
+    if (data is! Map) return null;
+
+    for (final key in [
+      'data',
+      'items',
+      'results',
+      'activos',
+      'personal',
+      'asignaciones',
+      'records',
+    ]) {
+      final valor = data[key];
+      if (valor is List) return valor;
+    }
+
+    return null;
+  }
+
+  List<Map<String, dynamic>> _filtrarResultadosLocales(
+    List<Map<String, dynamic>> resultados,
+  ) {
+    final campo = _campo;
+    final valor = _normalizar(_valorController.text);
+
+    if (campo == null || valor.isEmpty) return resultados;
+
+    return resultados.where((item) {
+      return _valoresParaCampo(item, campo)
+          .map(_normalizar)
+          .any((dato) => dato.contains(valor));
+    }).toList();
+  }
+
+  List<String> _valoresParaCampo(Map<String, dynamic> item, String campo) {
+    String texto(dynamic valor) => valor?.toString() ?? '';
+
+    switch (widget.tipo) {
+      case TipoBusqueda.activos:
+        return switch (campo) {
+          'codigo' => [texto(item['codigo'])],
+          'nombre' => [texto(item['nombre'])],
+          'estado' => [texto(item['estado'])],
+          _ => [],
+        };
+      case TipoBusqueda.personal:
+        return switch (campo) {
+          'documento' => [texto(item['documento'])],
+          'nombre' => [
+              texto(item['nombre']),
+              texto(item['apellidos']),
+              '${texto(item['nombre'])} ${texto(item['apellidos'])}',
+            ],
+          'correo' => [texto(item['correo'])],
+          _ => [],
+        };
+      case TipoBusqueda.asignaciones:
+        return switch (campo) {
+          'personal' => [
+              texto(item['personal']),
+              texto(item['nombre_personal']),
+              texto(item['nombrePersonal']),
+              texto(item['nombre']),
+              texto(item['responsable']),
+              texto(item['asignado_a']),
+            ],
+          'activo' => [
+              texto(item['activo']),
+              texto(item['nombre_activo']),
+              texto(item['nombreActivo']),
+            ],
+          'codigo' => [
+              texto(item['codigo']),
+              texto(item['codigo_activo']),
+              texto(item['codigoActivo']),
+            ],
+          _ => [],
+        };
     }
   }
 
@@ -744,4 +905,13 @@ String _etiqueta(String texto) {
   if (separado.isEmpty) return separado;
 
   return '${separado[0].toUpperCase()}${separado.substring(1)}';
+}
+
+String _normalizar(String texto) {
+  return texto
+      .toLowerCase()
+      .split('')
+      .map((letra) => _accentMap[letra] ?? letra)
+      .join()
+      .trim();
 }
