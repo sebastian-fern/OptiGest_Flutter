@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const String baseUrl = 'https://zooming-smile-production-7aa3.up.railway.app';
+const String baseUrl = 'https://striking-tenderness-production-99c5.up.railway.app/';
 const String apiEndpoint = '$baseUrl/api/Mobile';
 const Map<String, String> _accentMap = {
   'á': 'a',
